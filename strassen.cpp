@@ -8,7 +8,8 @@
 #include <chrono>
 using namespace std;
 
-// Command to Compile the c++ file: c++ -std=gnu++2a -Wall -g -O3 strassen.cc -o strassen
+// Command to Compile the c++ file: g++ -std=c++17 -O2 -Wall -Wextra strassen.cpp -o strassen -lm -lpthread ./strassen <args>
+//          Deprecated: c++ -std=gnu++2a -Wall -g -O3 strassen.cc -o strassen
 /**
 1) Analytically determine crossover point
 2) Generate matrices of a given size for testing matrix multiplication
@@ -17,6 +18,13 @@ using namespace std;
 3) Benchmark multiplication time for different sizes of matrix for Strassen's vs naive implementation
 6) Implement Strassen's with cutoff to use naive multiplication below cutoff
 */
+
+/**
+ * Optimization roadmap
+ * 1) Reduce the number of n/2 by n/2 allocations needed for the strassen() algorithm
+ * 2) Avoid padding with extra zeros needlessly
+ * 3) Modify wrapper code to take the input/output formats specified in the assignment
+ */
 
 int getNextPowerOf2(int n) {
     return pow(2, int(ceil(log2(n))));
@@ -28,6 +36,14 @@ void populate_matrix_values(vector< vector<int> > &arr, int r, int c) {
             arr[i][j] = rand()%2;
         }
     }
+}
+
+void output_values_along_diagonal(vector< vector<int> > &matrix, int s) {
+    //cout << "-------Output Matrix Values Along Diagonal--------" << endl;
+    for (int i = 0; i < s; ++i) {
+        cout << matrix[i][i] << endl;
+    }
+    //cout << "-------Finish Outputting Matrix Values Along Diagonal--------" << endl;
 }
 
 void print_matrix(vector< vector<int> > &matrix, int r, int c){
@@ -43,17 +59,20 @@ void print_matrix(vector< vector<int> > &matrix, int r, int c){
     }
 }
 
-void naive_matrix_multiplication(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int r1, int r2, int c1, int c2) {
-    //vector< vector<int> > &res = get_zero_matrix(r1,c2);
-    
+/**
+
+ */
+
+//---------------------------Strassens----------------------------------
+void naive_matrix_multiplication(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int n) {
     // Multiply arr1 and arr2 and store result
-    for(int i = 0; i < r1; ++i)
-        for(int j = 0; j < c2; ++j)
-            for(int k = 0; k < c1; ++k)
+    // TODO: rearrange i,j,k variables to speed up naive+strassen
+    for(int i = 0; i < n; ++i)
+        for(int j = 0; j < n; ++j)
+            for(int k = 0; k < n; ++k)
             {
                 res[i][j] += arr1[i][k] * arr2[k][j];
             }
-    //return res;
 }
 
 void add_matrices(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int s) {
@@ -70,42 +89,9 @@ void subtract_matrices(vector< vector<int> > &arr1, vector< vector<int> > &arr2,
             res[i][j] = arr1[i][j] - arr2[i][j];
 }
 
-//vector< vector<int> > &get_zero_matrix(int r, int c) {
-//    vector< vector<int> > m(r, vector<int> (c, 0));
-//    return &m;
-    /**vector< vector<int> > &arr = new int*[r];
-    for (int i = 0; i < r; ++i) {
-        arr[i] = new int[c];
-        for (int j = 0; j < c; ++j) {
-            arr[i][j] = 0;
-        }
-    }
-    return arr;*/
-//}
-
-/**
-
-// Return an nxn matrix
-vector< vector<int> > &get_matrix(int r, int c) {
-    cout << "get_matrix()" << endl;
-    vector< vector<int> > &arr = new int*[r];
-    cout << "initialize matrix" << endl;
-    for (int i = 0; i < r; ++i) {
-        arr[i] = new int[c];
-        for (int j = 0; j < c; ++j) {
-            arr[i][j] = rand()%2;
-        }
-    }
-    //cout << "finish initialize matrix" << endl;
-    return arr;
-}*/
-
 // r is the number of rows in arr1, l is the number of cols in arr1 and rows in arr2, c is the number of cols in arr2
 // Assumes input matrics are square and have dimensions that are powers of 2
 void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int size) {
-    // Initialize empty result matrix
-    //vector< vector<int> > &res = get_zero_matrix(size,size);
-
     //base case
     if (size == 1)
     {
@@ -116,6 +102,15 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
     // Create 8 submatrices of size n/2
     int ns = size/2; // new size of matrices split in half
     // NOTE: there's a more efficient way to initialize these matrices
+    // TODO: we are just reading the data in a-e, so we don't need to allocate/copy a-e submatrices data into 8 new matrices
+    // TODO: there's a way to reallocate using fewer than 7 submatrices
+    // We can calculate P1, add P1 to the submatrices that use it in the final result matrix, and then forget it, then
+    //      start on the rest of the calculation
+    // We don't need to allocate 4 submatrices ae_bg-cf_dh, we can just input values directly into the final matrix
+    /**
+     * @brief 
+     * We can
+     */
     vector< vector<int> > a(ns, vector<int> (ns, 0));
     vector< vector<int> > b(ns, vector<int> (ns, 0));
     vector< vector<int> > c(ns, vector<int> (ns, 0));
@@ -203,13 +198,27 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
 }
 
 // Run strassen on input matrices of any size
-void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int r1, int c1, int r2, int c2)
+void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int n)
 {  
-// Check to see if these matrices are already square and have dimensions of a power of 2. If not,
+// Check to see if these matrices have dimensions of a power of 2. If not,
 // the matrices must be resized and padded with zeroes to meet this criteria.
-    int k = max({r1,c1,r2,c2});
-    int s = getNextPowerOf2(k);
-    if (s==k && r1==k && r2==k && c1==k && c2==k) {
+/**
+ * @brief 
+ * TODO: we don't need to pad by zeros
+ * We could pass two indices tracking the last non-bogus row and the last non-bogus column
+ * E.g. if we want to multiply two 17-17 matrices, then strassen() will split the problem into 4 16-16 matrices M1-M4,
+ *      but call add, subtract, naive_matrix_multiplication functions with parameters
+ *      add(M1, size=16, valid_row=16, valid_col=16)
+ *      add(M2, 16, valid_row=16, valid_col=1)
+ *      add(M3, 16, valid_row=1, valid_col=16)
+ *      add(M4, 16, valid_row=1, valid_col=1)
+ *      Then add, subtract, naive_matrix_multiplication() functions should just "generate" magic 
+ *          0 values for the matrix values not within the valid_row, valid_col bounds
+ *      This avoids allocating extra 0 values that we don't need --> speedup
+ * 
+ */
+    int s = getNextPowerOf2(n);
+    if (s==n) {
         // Don't need to resize matrices
         strassen(arr1,arr2,res, s);
         return;
@@ -218,37 +227,37 @@ void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vecto
     vector< vector<int> > arr2Resized(s, vector<int> (s, 0));
     vector< vector<int> > resResized(s, vector<int> (s, 0));
 
-    for (int i = 0; i < r1; i++)
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < c1; j++)
+        for (int j = 0; j < n; j++)
         {
             arr1Resized[i][j] = arr1[i][j];
         }
     }
-    for (int i = 0; i < r2; i++)
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < c2; j++)
+        for (int j = 0; j < n; j++)
         {
             arr2Resized[i][j] = arr2[i][j];
         }
     }
     strassen(arr1Resized, arr2Resized, resResized, s);
-    //vector< vector<int> > &res = get_zero_matrix(r1,c2);
-    for (int i = 0; i < r1; i++)
+    // NOTE: is there a way to avoid copying data over to the original matrix?
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < c2; j++)
+        for (int j = 0; j < n; j++)
         {
             res[i][j] = resResized[i][j];
         }
     }
-    //print_matrix(res, r1, c2);
-    //return res;
 }
 
-bool verify_strassen_equals_naive_multiplication(vector< vector<int> > &naive_result, vector< vector<int> > &strassen_result, int r1, int c1, int c2) {
-    for (int i = 0; i < r1; i++)
+// ---------------------------Extra Verification/Utility Code Below-------------------------------
+
+bool verify_strassen_equals_naive_multiplication(vector< vector<int> > &naive_result, vector< vector<int> > &strassen_result, int n) {
+    for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < c2; j++)
+        for (int j = 0; j < n; j++)
         {
             if (naive_result[i][j] != strassen_result[i][j]) {
                 return false;
@@ -260,65 +269,117 @@ bool verify_strassen_equals_naive_multiplication(vector< vector<int> > &naive_re
 
 void measure_multiplication_time() {
     int matrix_sizes_to_test = 7;
-    int n_values[12] = {16,32,64,128, 256, 512, 1024};
+    int n_values[12] = {16,32,64,128};
     
     for (int i = 0; i < matrix_sizes_to_test; ++i) {
         int n = n_values[i];
-        chrono::steady_clock::time_point beginM = chrono::steady_clock::now();
+        //chrono::steady_clock::time_point beginM = chrono::steady_clock::now();
         vector< vector<int> > arr1(n, vector<int> (n,0));
         vector< vector<int> > arr2(n, vector<int> (n,0));
         vector< vector<int> > naive_result(n, vector<int> (n, 0));
         vector< vector<int> > strassen_result(n, vector<int> (n, 0));
-        chrono::steady_clock::time_point endM = chrono::steady_clock::now();
-        cout << "Time to initialize four  " << n << " by " << n << " matrices: " << chrono::duration_cast<chrono::milliseconds>(endM - beginM).count() << "[ms]" << endl;
+        //chrono::steady_clock::time_point endM = chrono::steady_clock::now();
+        //cout << "Time to initialize four  " << n << " by " << n << " matrices: " << chrono::duration_cast<chrono::milliseconds>(endM - beginM).count() << "[ms]" << endl;
 
-        chrono::steady_clock::time_point beginN = chrono::steady_clock::now();
-        naive_matrix_multiplication(arr1,arr2,naive_result,n,n,n,n);
-        chrono::steady_clock::time_point endN = chrono::steady_clock::now();
-        cout << "Naive multiplication -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endN - beginN).count() << "[ms]" << endl;
+        //chrono::steady_clock::time_point beginN = chrono::steady_clock::now();
+        naive_matrix_multiplication(arr1,arr2,naive_result,n);
+        //chrono::steady_clock::time_point endN = chrono::steady_clock::now();
+        //cout << "Naive multiplication -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endN - beginN).count() << "[ms]" << endl;
         
-        chrono::steady_clock::time_point beginS = chrono::steady_clock::now();
-        runStrassen(arr1,arr2,strassen_result, n,n,n,n);
-        chrono::steady_clock::time_point endS = chrono::steady_clock::now();
-        cout << "Strassen -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endS - beginS).count() << "[ms]" << endl;
+        //chrono::steady_clock::time_point beginS = chrono::steady_clock::now();
+        runStrassen(arr1,arr2,strassen_result, n);
+        //chrono::steady_clock::time_point endS = chrono::steady_clock::now();
+        //cout << "Strassen -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endS - beginS).count() << "[ms]" << endl;
         // Assertion fails if result of strassen multiplication doesn't equal result of naive multiplication
-        assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n,n,n));
+        assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
     }
     
 
 
 }
 
-// ./strassen 0 numpoints numtrials dimension
+void read_in_matrix_values(vector< vector<int> > &arr1, vector< vector<int> > &arr2,  int n, std::string input_file) {
+    //cout << input_file << endl;
+    std::ifstream pFile(input_file.c_str());
+    string line;
+    int x;
+    int r = 0;
+    int c = 0;
+    while (pFile >> x && r < n) {
+        arr1[r][c]=x;
+        c++;
+        if (c==n) {
+            c=0;
+            r++;
+        }
+    }
+    r = 0;
+    c = 0;
+    while (pFile >> x && r < n) {
+        arr2[r][c]=x;
+        c++;
+        if (c==n) {
+            c=0;
+            r++;
+        }
+    }
+    pFile.close();
+}
+
+// ./strassen 0 dimension input_file
 int main(int argc, char **argv) {
+    assert(argc==4);
+    int dimension = atoi(argv[2]);
+    uint flag=atoi(argv[1]);
+    std::string input_file = argv[3];
+
     // Get matrices
-    int r1=2; // Define dimensions of input matrices
-    int c1=3;
-    int r2=c1;
-    int c2=1;
+    (void) flag;
+    int n = dimension;
 
-    vector< vector<int> > arr1(r1, vector<int> (c1, 0));
-    vector< vector<int> > arr2(r2, vector<int> (c2, 0));
-    vector< vector<int> > naive_result(r1, vector<int> (c2, 0));
-    vector< vector<int> > strassen_result(r1, vector<int> (c2, 0));
+    vector< vector<int> > arr1(n, vector<int> (n, 0));
+    vector< vector<int> > arr2(n, vector<int> (n, 0));
+    vector< vector<int> > naive_result(n, vector<int> (n, 0));
+    vector< vector<int> > strassen_result(n, vector<int> (n, 0));
 
-    populate_matrix_values(arr1, r1, c1); // Random 0's and 1's
-    populate_matrix_values(arr2, r2, c2);
+    read_in_matrix_values(arr1,arr2,n,input_file);
+
+    //populate_matrix_values(arr1, n, n); // Random 0's and 1's
+    //populate_matrix_values(arr2, n, n);
     
     // Run matrix multiplication 
-    naive_matrix_multiplication(arr1,arr2,naive_result, r1,c1,c1,c2);
-    runStrassen(arr1,arr2,strassen_result,r1,c1,c1,c2);
+    naive_matrix_multiplication(arr1,arr2,naive_result, n);
+    runStrassen(arr1,arr2,strassen_result,n);
     
     
     // Display result of calculations
-    print_matrix(arr1,r1,c1);
-    print_matrix(arr2,c1,c2);
-    print_matrix(naive_result,r1,c2);
-    print_matrix(strassen_result,r1,c2);
+    //print_matrix(arr1,n,n);
+    //print_matrix(arr2,n,n);
+    //print_matrix(naive_result,n,n);
+    //print_matrix(strassen_result,n,n);
+    //output_values_along_diagonal(naive_result,n);
+    output_values_along_diagonal(strassen_result,n);
 
     // Compare runtimes of strassen and ours
-    measure_multiplication_time();
+    //measure_multiplication_time();
     return 0;
 
     
 }
+
+/**
+Input/Output Description
+Your code should take three arguments: a flag, a dimension, and an input file:
+$ ./strassen 0 dimension inputfile
+The flag 0 is meant to provide you some flexibility; you may use other values for your own testing,
+debugging, or extensions. The dimension, which we refer to henceforth as d, is the dimension of the matrix
+you are multiplying, so that 32 means you are multiplying two 32 by 32 matrices together. 
+The inputfile is
+an ASCII file with 2d2 integer numbers, one per line, representing two matrices A and B; you are to find
+the product AB = C. The first integer number is matrix entry a0,0, followed by a0,1, a0,2, . . . , a0,d−1; next
+comes a1,0, a1,1, and so on, for the first d2 numbers. The next d2 numbers are similar for matrix B.
+Your program should put on standard output (in C: printf, cout, System.out, etc.) a list of the values
+of the diagonal entries c0,0, n,1, . . . , cd−1,d−1, one per line, including a trailing newline. The output will
+be checked by a script – add no clutter. (You should not output the whole matrix, although of course all
+entries should be computed.)
+ */
