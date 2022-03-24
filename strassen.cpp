@@ -38,6 +38,14 @@ void populate_matrix_values(vector< vector<int> > &arr, int r, int c) {
     }
 }
 
+void populate_matrix_zeros(vector< vector<int> > &arr, int s) {
+    for (int i = 0; i < s; ++i) {
+        for (int j = 0; j < s; ++j) {
+            arr[i][j] = 0;
+        }
+    }
+}
+
 void output_values_along_diagonal(vector< vector<int> > &matrix, int s) {
     //cout << "-------Output Matrix Values Along Diagonal--------" << endl;
     for (int i = 0; i < s; ++i) {
@@ -93,17 +101,13 @@ void subtract_matrices(vector< vector<int> > &arr1, vector< vector<int> > &arr2,
 // Assumes input matrics are square and have dimensions that are powers of 2
 void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int size, int r1, int c1, int r2, int c2, int r3, int c3) {
     //base case
-    //cout << "start strassen " << size << " " << r1 << " " << c1 << " " << r2 << " " << c2 << " " << r3 << " " << c3 << endl;
     
     if (size == 1)
     {
         res[r3][c3] = arr1[r1][c1] * arr2[r2][c2];
-        //res[0][0] = arr1[0][0] * arr2[0][0];
-        //cout << "Return val 0" << endl;
         return;
     }
-    //cout << "allocate submatrices" << endl;
-
+    
     // Create 8 submatrices of size n/2
     int ns = size/2; // new size of matrices split in half
     // NOTE: there's a more efficient way to initialize these matrices
@@ -119,79 +123,70 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
     //NOTE: 10^24 choose 3 number of triangles for part 3 of this assignment according to michael zhao
     // TODO: switch the strassen() function to take in r1,c1,r2,c2,r3,c3 input parameters and then
     //      remove all uses of the a-h submatrices in function calls
-    /**
-    vector< vector<int> > a(ns, vector<int> (ns, 0));
-    vector< vector<int> > b(ns, vector<int> (ns, 0));
-    vector< vector<int> > c(ns, vector<int> (ns, 0));
-    vector< vector<int> > d(ns, vector<int> (ns, 0));
-    vector< vector<int> > e(ns, vector<int> (ns, 0));
-    vector< vector<int> > f(ns, vector<int> (ns, 0));
-    vector< vector<int> > g(ns, vector<int> (ns, 0));
-    vector< vector<int> > h(ns, vector<int> (ns, 0));*/
-    vector< vector<int> > p1(ns, vector<int> (ns, 0));
+    /**vector< vector<int> > p1(ns, vector<int> (ns, 0));
     vector< vector<int> > p2(ns, vector<int> (ns, 0));
     vector< vector<int> > p3(ns, vector<int> (ns, 0));
     vector< vector<int> > p4(ns, vector<int> (ns, 0));
     vector< vector<int> > p5(ns, vector<int> (ns, 0));
     vector< vector<int> > p6(ns, vector<int> (ns, 0));
-    vector< vector<int> > p7(ns, vector<int> (ns, 0));
-    //vector< vector<int> > ae_bg(ns, vector<int> (ns, 0));
-    //vector< vector<int> > af_bh(ns, vector<int> (ns, 0));
-    //vector< vector<int> > ce_dg(ns, vector<int> (ns, 0));
-    //vector< vector<int> > cf_dh(ns, vector<int> (ns, 0));
+    vector< vector<int> > p7(ns, vector<int> (ns, 0));*/
+    vector< vector<int> > p(ns, vector<int> (ns, 0));
     vector< vector<int> > temp1(ns, vector<int> (ns, 0));
     vector< vector<int> > temp2(ns, vector<int> (ns, 0));
     // Divide the matrices into sub matrices of size/2 by size/2
-    /**
-    int i,j;
-    for (i = 0; i < ns; i++)
-            {
-                for (j = 0; j < ns; j++)
-                {
-                    a[i][j] = arr1[i][j];
-                    b[i][j] = arr1[i][j + ns];
-                    c[i][j] = arr1[i + ns][j];
-                    d[i][j] = arr1[i + ns][j + ns];
-
-                    e[i][j] = arr2[i][j];
-                    f[i][j] = arr2[i][j + ns];
-                    g[i][j] = arr2[i + ns][j];
-                    h[i][j] = arr2[i + ns][j + ns];
-                }
-    }*/
-    //cout << "calc 7 subproblems" << endl;
+    
+    
     // Calculate 7 Subproblems
-    //subtract_matrices(f,h,temp1,ns);
-    //TODO: change subtract_matrices, everything else to not allocate new submatrices
-    //subtract_matrices(&arr2[0][ns],&arr2[ns][ns]);
+    // Most recent edits since last commit/push happened below this line
+    // Calculate P1
     subtract_matrices(arr2,arr2,temp1,ns,0+r2,ns+c2,ns+r2,ns+c2,0,0);
-    // TODO: finish changing indexing for arr1, arr2 when calling add(), subtract(), multiply()
-    //strassen(a,temp1,p1,ns); // P1
-    strassen(arr1,temp1,p1,ns,r1,c1,0,0,0,0);
+    strassen(arr1,temp1,p,ns,r1,c1,0,0,0,0);
+    // Use P1 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
+    add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
+    populate_matrix_zeros(p,ns);
+
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,0+r1,ns+c1,0,0); // add(a,b)
-    strassen(temp1,arr2,p2,ns,0,0,r2+ns,c2+ns,0,0); // P2 = (A+B)*H - temp1 h
+    strassen(temp1,arr2,p,ns,0,0,r2+ns,c2+ns,0,0); // P2 = (A+B)*H - temp1 h
+    // Use P2 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
+    subtract_matrices(res,p,res,ns,r3,c3,0,0,r3,c3);
+    populate_matrix_zeros(p,ns);
+
     add_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,ns+r1,ns+c1,0,0); // add(c,d)
-    strassen(temp1,arr2,p3,ns,0,0,r2,c2,0,0); // P3 = (c+d)*e - temp1 e
-    //subtract_matrices(g,e,temp1,ns); // sub(g,e)
+    strassen(temp1,arr2,p,ns,0,0,r2,c2,0,0); // P3 = (c+d)*e - temp1 e
+    // Use P3 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
+    subtract_matrices(res,p,res,ns,r3+ns,c3+ns,0,0,r3+ns,c3+ns);
+    populate_matrix_zeros(p,ns);
+
     subtract_matrices(arr2,arr2,temp1,ns,ns+r2,0+c2,0+r2,0+c2,0,0);
-    strassen(arr1,temp1,p4,ns,r1+ns,c1+ns,0,0,0,0); // P4 - d temp1
-    //add_matrices(a,d,temp1,ns);
-    //add_matrices(e,h,temp2,ns);
+    strassen(arr1,temp1,p,ns,r1+ns,c1+ns,0,0,0,0); // P4 - d temp1
+    // Use P4 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
+    add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
+    populate_matrix_zeros(p,ns);
+
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,ns+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p5,ns,0,0,0,0,0,0); // P5 = a*d+e*h
-    //subtract_matrices(b,d,temp1,ns);
-    //add_matrices(g,h,temp2,ns);
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P5 = a*d+e*h
+    // Use P5 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
+    add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
+    populate_matrix_zeros(p,ns);
+
     subtract_matrices(arr1,arr1,temp1,ns,0+r1,ns+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,ns+r2,0+c2,ns+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p6,ns,0,0,0,0,0,0); // P6
-    //subtract_matrices(c,a,temp1,ns);
-    //add_matrices(e,f,temp2,ns);
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P6
+    // Use P6 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
+    populate_matrix_zeros(p,ns);
+
     subtract_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,0+r1,0+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,0+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p7,ns,0,0,0,0,0,0); // P7
-
-    //cout << "finish calc 7 subproblems" << endl;
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P7
+    // Use P7 for result matrix
+    add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
 
     /**
     • AE +BG = P4 +P5 +P6 - P2
@@ -201,14 +196,6 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
     */
     // Use 7 Subproblems to calculate the values for the four quadrants
     /**
-    subtract_matrices(p6,p2,temp1,ns);
-    add_matrices(temp1,p5,temp2,ns);
-    add_matrices(temp2,p4,ae_bg,ns);
-    add_matrices(p1,p2,af_bh,ns);
-    add_matrices(p3,p4,ce_dg,ns);
-    subtract_matrices(p1,p3,temp1,ns);
-    add_matrices(temp1,p5,temp2,ns);
-    add_matrices(temp2,p7,cf_dh,ns);*/
     subtract_matrices(p6,p2,temp1,ns,0,0,0,0,0,0);
     add_matrices(temp1,p5,temp2,ns,0,0,0,0,0,0);
     add_matrices(temp2,p4,res,ns,0,0,0,0,r3,c3);
@@ -216,20 +203,7 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
     add_matrices(p3,p4,res,ns,0,0,0,0,r3+ns,c3+0);
     subtract_matrices(p1,p3,temp1,ns,0,0,0,0,0,0);
     add_matrices(temp1,p5,temp2,ns,0,0,0,0,0,0);
-    add_matrices(temp2,p7,res,ns,0,0,0,0,r3+ns,c3+ns);
-
-    // Combine the 4 quadrant subproblems into the results matrix
-    /**
-    for (i = 0; i < ns; i++)
-    {
-        for (j = 0; j < ns; j++)
-        {
-            res[i][j] = ae_bg[i][j];
-            res[i][j + ns] = af_bh[i][j];
-            res[i + ns][j] = ce_dg[i][j];
-            res[i + ns][j + ns] = cf_dh[i][j];
-        }
-    }*/
+    add_matrices(temp2,p7,res,ns,0,0,0,0,r3+ns,c3+ns);*/
 }
 
 // Run strassen on input matrices of any size
@@ -303,19 +277,18 @@ bool verify_strassen_equals_naive_multiplication(vector< vector<int> > &naive_re
 }
 
 void measure_multiplication_time() {
-    int matrix_sizes_to_test = 7;
+    int matrix_sizes_to_test = 6;
     int n_values[12] = {16,32,64,128,256,512};
     
     for (int i = 0; i < matrix_sizes_to_test; ++i) {
         int n = n_values[i];
-        chrono::steady_clock::time_point beginM = chrono::steady_clock::now();
         vector< vector<int> > arr1(n, vector<int> (n,0));
         vector< vector<int> > arr2(n, vector<int> (n,0));
+        populate_matrix_values(arr1, n, n);
+        populate_matrix_values(arr2, n, n);
         vector< vector<int> > naive_result(n, vector<int> (n, 0));
         vector< vector<int> > strassen_result(n, vector<int> (n, 0));
-        chrono::steady_clock::time_point endM = chrono::steady_clock::now();
-        cout << "Time to initialize four  " << n << " by " << n << " matrices: " << chrono::duration_cast<chrono::milliseconds>(endM - beginM).count() << "[ms]" << endl;
-
+        
         chrono::steady_clock::time_point beginN = chrono::steady_clock::now();
         naive_matrix_multiplication(arr1,arr2,naive_result,n,0,0,0,0,0,0);
         chrono::steady_clock::time_point endN = chrono::steady_clock::now();
