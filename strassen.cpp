@@ -8,6 +8,7 @@
 #include <chrono>
 using namespace std;
 
+// TODO: run ./strassen 4 3 input_file.txt
 // Command to Compile the c++ file: g++ -std=c++17 -O2 -Wall -Wextra strassen.cpp -o strassen -lm -lpthread ./strassen <args>
 //          Deprecated: c++ -std=gnu++2a -Wall -g -O3 strassen.cc -o strassen
 /**
@@ -25,6 +26,19 @@ using namespace std;
  * 2) Avoid padding with extra zeros needlessly
  * 3) Modify wrapper code to take the input/output formats specified in the assignment
  */
+
+int cross_over_point = 128;
+
+void padMatrix(vector< vector<int> > &mat, int size, int new_size) {
+    if (size % 2 == 1) {
+        for (int i = 0; i < size; ++i) {
+            vector<int> v_prime(new_size-size,0);
+            mat[i].reserve(mat[i].size() + distance(v_prime.begin(),v_prime.end()));
+            mat[i].insert(mat[i].end(),v_prime.begin(),v_prime.end());
+        }
+    }
+    mat.push_back(vector<int> (new_size,0));
+}
 
 int getNextPowerOf2(int n) {
     return pow(2, int(ceil(log2(n))));
@@ -99,69 +113,51 @@ void subtract_matrices(vector< vector<int> > &arr1, vector< vector<int> > &arr2,
 
 // r is the number of rows in arr1, l is the number of cols in arr1 and rows in arr2, c is the number of cols in arr2
 // Assumes input matrics are square and have dimensions that are powers of 2
-void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int size, int r1, int c1, int r2, int c2, int r3, int c3) {
+void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int size, int r1, int c1, int r2, int c2, int r3, int c3, int cross_over_point) {
     //base case
-    
-    if (size == 1)
+    // TODO: implement crossover point already
+    //naive_matrix_multiplication
+    if (size < cross_over_point)
     {
-        res[r3][c3] = arr1[r1][c1] * arr2[r2][c2];
+        naive_matrix_multiplication(arr1,arr2,res,size,r1,c1,r2,c2,r3,c3);
         return;
     }
+
+    //padMatrix(arr1,size,size+1);
+    //padMatrix(arr2,size,size+1);
     
-    // Create 8 submatrices of size n/2
-    int ns = size/2; // new size of matrices split in half
-    // NOTE: there's a more efficient way to initialize these matrices
-    // TODO: we are just reading the data in a-e, so we don't need to allocate/copy a-e submatrices data into 8 new matrices
-    // TODO: there's a way to reallocate using fewer than 7 submatrices
-    // We can calculate P1, add P1 to the submatrices that use it in the final result matrix, and then forget it, then
-    //      start on the rest of the calculation
-    // We don't need to allocate 4 submatrices ae_bg-cf_dh, we can just input values directly into the final matrix
-    /**
-     * @brief 
-     * We can
-     */
-    //NOTE: 10^24 choose 3 number of triangles for part 3 of this assignment according to michael zhao
-    // TODO: switch the strassen() function to take in r1,c1,r2,c2,r3,c3 input parameters and then
-    //      remove all uses of the a-h submatrices in function calls
-    /**vector< vector<int> > p1(ns, vector<int> (ns, 0));
-    vector< vector<int> > p2(ns, vector<int> (ns, 0));
-    vector< vector<int> > p3(ns, vector<int> (ns, 0));
-    vector< vector<int> > p4(ns, vector<int> (ns, 0));
-    vector< vector<int> > p5(ns, vector<int> (ns, 0));
-    vector< vector<int> > p6(ns, vector<int> (ns, 0));
-    vector< vector<int> > p7(ns, vector<int> (ns, 0));*/
+    // new size of matrices split in half
+    int ns = size/2;
+    
     vector< vector<int> > p(ns, vector<int> (ns, 0));
     vector< vector<int> > temp1(ns, vector<int> (ns, 0));
     vector< vector<int> > temp2(ns, vector<int> (ns, 0));
-    // Divide the matrices into sub matrices of size/2 by size/2
-    
     
     // Calculate 7 Subproblems
-    // Most recent edits since last commit/push happened below this line
     // Calculate P1
     subtract_matrices(arr2,arr2,temp1,ns,0+r2,ns+c2,ns+r2,ns+c2,0,0);
-    strassen(arr1,temp1,p,ns,r1,c1,0,0,0,0);
+    strassen(arr1,temp1,p,ns,r1,c1,0,0,0,0,cross_over_point);
     // Use P1 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
     populate_matrix_zeros(p,ns);
 
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,0+r1,ns+c1,0,0); // add(a,b)
-    strassen(temp1,arr2,p,ns,0,0,r2+ns,c2+ns,0,0); // P2 = (A+B)*H - temp1 h
+    strassen(temp1,arr2,p,ns,0,0,r2+ns,c2+ns,0,0,cross_over_point); // P2 = (A+B)*H - temp1 h
     // Use P2 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
     subtract_matrices(res,p,res,ns,r3,c3,0,0,r3,c3);
     populate_matrix_zeros(p,ns);
 
     add_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,ns+r1,ns+c1,0,0); // add(c,d)
-    strassen(temp1,arr2,p,ns,0,0,r2,c2,0,0); // P3 = (c+d)*e - temp1 e
+    strassen(temp1,arr2,p,ns,0,0,r2,c2,0,0,cross_over_point); // P3 = (c+d)*e - temp1 e
     // Use P3 for result matrix
     add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
     subtract_matrices(res,p,res,ns,r3+ns,c3+ns,0,0,r3+ns,c3+ns);
     populate_matrix_zeros(p,ns);
 
     subtract_matrices(arr2,arr2,temp1,ns,ns+r2,0+c2,0+r2,0+c2,0,0);
-    strassen(arr1,temp1,p,ns,r1+ns,c1+ns,0,0,0,0); // P4 - d temp1
+    strassen(arr1,temp1,p,ns,r1+ns,c1+ns,0,0,0,0,cross_over_point); // P4 - d temp1
     // Use P4 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
@@ -169,7 +165,7 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
 
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,ns+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P5 = a*d+e*h
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0,cross_over_point); // P5 = a*d+e*h
     // Use P5 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
@@ -177,14 +173,14 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
 
     subtract_matrices(arr1,arr1,temp1,ns,0+r1,ns+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,ns+r2,0+c2,ns+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P6
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0,cross_over_point); // P6
     // Use P6 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
     populate_matrix_zeros(p,ns);
 
     subtract_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,0+r1,0+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,0+r2,ns+c2,0,0);
-    strassen(temp1,temp2,p,ns,0,0,0,0,0,0); // P7
+    strassen(temp1,temp2,p,ns,0,0,0,0,0,0,cross_over_point); // P7
     // Use P7 for result matrix
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
 
@@ -194,20 +190,10 @@ void strassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< 
     • CE +DG = P3 +P4
     • CF +DH = P1 −P3 +P5 +P7
     */
-    // Use 7 Subproblems to calculate the values for the four quadrants
-    /**
-    subtract_matrices(p6,p2,temp1,ns,0,0,0,0,0,0);
-    add_matrices(temp1,p5,temp2,ns,0,0,0,0,0,0);
-    add_matrices(temp2,p4,res,ns,0,0,0,0,r3,c3);
-    add_matrices(p1,p2,res,ns,0,0,0,0,r3,c3+ns);
-    add_matrices(p3,p4,res,ns,0,0,0,0,r3+ns,c3+0);
-    subtract_matrices(p1,p3,temp1,ns,0,0,0,0,0,0);
-    add_matrices(temp1,p5,temp2,ns,0,0,0,0,0,0);
-    add_matrices(temp2,p7,res,ns,0,0,0,0,r3+ns,c3+ns);*/
 }
 
 // Run strassen on input matrices of any size
-void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int n)
+void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vector< vector<int> > &res, int n, int cross_over_point)
 {  
 // Check to see if these matrices have dimensions of a power of 2. If not,
 // the matrices must be resized and padded with zeroes to meet this criteria.
@@ -226,15 +212,22 @@ void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vecto
  *      This avoids allocating extra 0 values that we don't need --> speedup
  * 
  */
+// TODO: add function that pads an extra row/column to a matrix if the matrix has odd rows/columns
+
     int s = getNextPowerOf2(n);
-    if (s==n) {
-        // Don't need to resize matrices
-        strassen(arr1,arr2,res, s,0,0,0,0,0,0);
-        return;
+    vector< vector<int> > p(n/2, vector<int> (n/2, 0));
+    if (s!=n) {
+        padMatrix(arr1,s,n);
+        padMatrix(arr2,s,n);
+        padMatrix(res,s,n);
     }
-    vector< vector<int> > arr1Resized(s, vector<int> (s, 0));
-    vector< vector<int> > arr2Resized(s, vector<int> (s, 0));
-    vector< vector<int> > resResized(s, vector<int> (s, 0));
+    strassen(arr1,arr2,res,s,0,0,0,0,0,0,cross_over_point);
+    return;
+
+    /**
+    //vector< vector<int> > arr1Resized(s, vector<int> (s, 0));
+    //vector< vector<int> > arr2Resized(s, vector<int> (s, 0));
+    //vector< vector<int> > resResized(s, vector<int> (s, 0));
 
     for (int i = 0; i < n; i++)
     {
@@ -258,7 +251,7 @@ void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vecto
         {
             res[i][j] = resResized[i][j];
         }
-    }
+    }*/
 }
 
 // ---------------------------Extra Verification/Utility Code Below-------------------------------
@@ -277,8 +270,8 @@ bool verify_strassen_equals_naive_multiplication(vector< vector<int> > &naive_re
 }
 
 void measure_multiplication_time() {
-    int matrix_sizes_to_test = 6;
-    int n_values[12] = {16,32,64,128,256,512};
+    int matrix_sizes_to_test = 8;
+    int n_values[12] = {16,32,64,128,256,512,1024,2048};
     
     for (int i = 0; i < matrix_sizes_to_test; ++i) {
         int n = n_values[i];
@@ -295,15 +288,61 @@ void measure_multiplication_time() {
         cout << "Naive multiplication -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endN - beginN).count() << "[ms]" << endl;
         
         chrono::steady_clock::time_point beginS = chrono::steady_clock::now();
-        runStrassen(arr1,arr2,strassen_result, n);
+        runStrassen(arr1,arr2,strassen_result, n, cross_over_point);
         chrono::steady_clock::time_point endS = chrono::steady_clock::now();
         cout << "Strassen -  " << n << " by " << n << " matrix: " << chrono::duration_cast<chrono::milliseconds>(endS - beginS).count() << "[ms]" << endl;
         // Assertion fails if result of strassen multiplication doesn't equal result of naive multiplication
         assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
     }
+}
+
+void measure_crossover_point() {
+    int crossover_values_to_test = 23;
+    //int n_values[12] = {16,32,64,128,256,512,1024,2048};
+    int n_values[23] = {16,32,36,40,44,48,52,56,60,64,68,72,96,112,128,192,256,384,512,768,1024,1536,2048};
+
+    int n = 1024;
+    vector< vector<int> > arr1(n, vector<int> (n,0));
+    vector< vector<int> > arr2(n, vector<int> (n,0));
+    vector< vector<int> > strassen_result(n, vector<int> (n, 0));
+    populate_matrix_values(arr1, n, n);
+    populate_matrix_values(arr2, n, n);
+
+    ofstream outdata;
+    outdata.open("crossover_point_times.dat", ios_base::app); // opens the file
+    if( !outdata ) { // file couldn't be opened
+        cerr << "Error: file could not be opened" << endl;
+        exit(1);
+    }
+
+    for (int i = 0; i < crossover_values_to_test; ++i) {
+        outdata << n_values[i] << endl;
+    }
+    outdata << endl;
+    int numtrials = 10;
     
+    for (int i = 0; i < crossover_values_to_test; ++i) {
+        int crossover_value = n_values[i];
+        chrono::steady_clock::time_point beginS = chrono::steady_clock::now();
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        runStrassen(arr1,arr2,strassen_result, n, crossover_value);
+        chrono::steady_clock::time_point endS = chrono::steady_clock::now();
+        // Output time collected over 5 trials
+        int time = chrono::duration_cast<chrono::milliseconds>(endS - beginS).count()/numtrials;
+        outdata << time << endl;
+        cout << "Strassen crossover point: " << crossover_value << ": " << time << "[ms]" << endl;
+    }
+    outdata << endl;
 
-
+    outdata.close();
 }
 
 void read_in_matrix_values(vector< vector<int> > &arr1, vector< vector<int> > &arr2,  int n, std::string input_file) {
@@ -350,14 +389,18 @@ int main(int argc, char **argv) {
     vector< vector<int> > naive_result(n, vector<int> (n, 0));
     vector< vector<int> > strassen_result(n, vector<int> (n, 0));
 
-    read_in_matrix_values(arr1,arr2,n,input_file);
+    if (flag == 2) {
+        populate_matrix_values(arr1, n, n); // Random 0's and 1's
+        populate_matrix_values(arr2, n, n);
+    } else {
+        read_in_matrix_values(arr1,arr2,n,input_file);
+    }
 
-    //populate_matrix_values(arr1, n, n); // Random 0's and 1's
-    //populate_matrix_values(arr2, n, n);
+    
     
     // Run matrix multiplication 
     naive_matrix_multiplication(arr1,arr2,naive_result, n,0,0,0,0,0,0);
-    runStrassen(arr1,arr2,strassen_result,n);
+    runStrassen(arr1,arr2,strassen_result,n,cross_over_point);
     
     
     // Display result of calculations
@@ -370,6 +413,8 @@ int main(int argc, char **argv) {
     } else if (flag == 1) {
         // Compare runtimes of strassen and ours
         measure_multiplication_time();
+    } else if (flag == 4) {
+        measure_crossover_point();
     } else {
         print_matrix(arr1,n,n);
         print_matrix(arr2,n,n);
