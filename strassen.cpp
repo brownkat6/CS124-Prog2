@@ -22,9 +22,9 @@ using namespace std;
 
 /**
  * Optimization roadmap
- * 1) Reduce the number of n/2 by n/2 allocations needed for the strassen() algorithm
+ * 1) Reduce the number of n/2 by n/2 allocations needed for the strassen() algorithm. Done.
  * 2) Avoid padding with extra zeros needlessly
- * 3) Modify wrapper code to take the input/output formats specified in the assignment
+ * 3) Modify wrapper code to take the input/output formats specified in the assignment. Done.
  */
 
 int cross_over_point = 128;
@@ -37,7 +37,9 @@ void padMatrix(vector< vector<int> > &mat, int size, int new_size) {
             mat[i].insert(mat[i].end(),v_prime.begin(),v_prime.end());
         }
     }
-    mat.push_back(vector<int> (new_size,0));
+    for (int i = 0; i < new_size-size; ++i) {
+        mat.push_back(vector<int> (new_size,0));
+    }
 }
 
 int getNextPowerOf2(int n) {
@@ -198,9 +200,9 @@ void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vecto
 // Check to see if these matrices have dimensions of a power of 2. If not,
 // the matrices must be resized and padded with zeroes to meet this criteria.
 /**
- * @brief 
- * TODO: we don't need to pad by zeros
- * We could pass two indices tracking the last non-bogus row and the last non-bogus column
+ * TODO: is there a way to handle indexing so that we only need to add 1 row/column of zeros for odd-numbered
+ *      matrices for each call to strassen()?
+ * To avoid padding by zeros, we could pass two indices tracking the last non-bogus row and the last non-bogus column
  * E.g. if we want to multiply two 17-17 matrices, then strassen() will split the problem into 4 16-16 matrices M1-M4,
  *      but call add, subtract, naive_matrix_multiplication functions with parameters
  *      add(M1, size=16, valid_row=16, valid_col=16)
@@ -217,9 +219,9 @@ void runStrassen(vector< vector<int> > &arr1, vector< vector<int> > &arr2, vecto
     int s = getNextPowerOf2(n);
     vector< vector<int> > p(n/2, vector<int> (n/2, 0));
     if (s!=n) {
-        padMatrix(arr1,s,n);
-        padMatrix(arr2,s,n);
-        padMatrix(res,s,n);
+        padMatrix(arr1,n,s); // Resize each matrix to the nearest power of 2
+        padMatrix(arr2,n,s);
+        padMatrix(res,n,s);
     }
     strassen(arr1,arr2,res,s,0,0,0,0,0,0,cross_over_point);
     return;
