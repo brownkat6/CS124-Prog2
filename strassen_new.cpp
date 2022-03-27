@@ -364,6 +364,7 @@ int main(int argc, char **argv) {
     
     if (flag == 0) {
         output_values_along_diagonal(strassen_result,n);
+        assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
     } else if (flag == 1) {
         // Compare runtimes of strassen and ours
         measure_multiplication_time();
