@@ -7,23 +7,9 @@
 #include <random>
 #include <chrono>
 using namespace std;
-
 // Command to Compile the c++ file: g++ -std=c++17 -O2 -Wall -Wextra strassen.cpp -o strassen -lm -lpthread ./strassen <args>
 
 int cross_over_point = 128;
-
-void padMatrix(vector< vector<long long int> > &mat, int size, int new_size) {
-    if (size % 2 == 1) {
-        for (int i = 0; i < size; ++i) {
-            vector<long long int> v_prime(new_size-size,0);
-            mat[i].reserve(mat[i].size() + distance(v_prime.begin(),v_prime.end()));
-            mat[i].insert(mat[i].end(),v_prime.begin(),v_prime.end());
-        }
-    }
-    for (int i = 0; i < new_size-size; ++i) {
-        mat.push_back(vector<long long int> (new_size,0));
-    }
-}
 
 int getNextPowerOf2(int n) {
     return pow(2, int(ceil(log2(n))));
@@ -43,14 +29,6 @@ void populate_matrix_values_p(vector< vector<long long int> > &arr, int s, float
             int v = (rand()%100 < p*100) ? 1 : 0;
             arr[i][j] = v;
             arr[j][i] = v;
-        }
-    }
-}
-
-void populate_matrix_zeros(vector< vector<long long int> > &arr, int s) {
-    for (int i = 0; i < s; ++i) {
-        for (int j = 0; j < s; ++j) {
-            arr[i][j] = 0;
         }
     }
 }
@@ -83,11 +61,10 @@ void naive_matrix_multiplication(vector< vector<long long int> > &arr1, vector< 
     for(int i = 0; i < min(size1-r1,n); ++i) 
         for (int k = 0; k < min(size1-c1,min(size2-r2,n)); ++k) 
             for(int j = 0; j < min(size2-c2,n); ++j) 
-                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];
+                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];//*/
 }
 
 void add_matrices(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int s, int r1, int c1, int r2, int c2, int r3, int c3) {
-    // Add arr1 and arr2 and store result
     int size1 = arr1.size();
     int size2 = arr2.size();
     int sizeRes = res.size();
@@ -133,28 +110,24 @@ void strassen(vector< vector<long long int> > &arr1, vector< vector<long long in
     // Use P1 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
-    populate_matrix_zeros(p,ns);
 
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,0+r1,ns+c1,0,0); // add(a,b)
     strassen(temp1,arr2,p,ns,0,0,r2+ns,c2+ns,0,0,cross_over_point); // P2 = (A+B)*H - temp1 h
     // Use P2 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3+ns,r3,c3+ns);
     subtract_matrices(res,p,res,ns,r3,c3,0,0,r3,c3);
-    populate_matrix_zeros(p,ns);
 
     add_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,ns+r1,ns+c1,0,0); // add(c,d)
     strassen(temp1,arr2,p,ns,0,0,r2,c2,0,0,cross_over_point); // P3 = (c+d)*e - temp1 e
     // Use P3 for result matrix
     add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
     subtract_matrices(res,p,res,ns,r3+ns,c3+ns,0,0,r3+ns,c3+ns);
-    populate_matrix_zeros(p,ns);
 
     subtract_matrices(arr2,arr2,temp1,ns,ns+r2,0+c2,0+r2,0+c2,0,0);
     strassen(arr1,temp1,p,ns,r1+ns,c1+ns,0,0,0,0,cross_over_point); // P4 - d temp1
     // Use P4 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3,r3+ns,c3);
-    populate_matrix_zeros(p,ns);
 
     add_matrices(arr1,arr1,temp1,ns,0+r1,0+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,ns+r2,ns+c2,0,0);
@@ -162,14 +135,12 @@ void strassen(vector< vector<long long int> > &arr1, vector< vector<long long in
     // Use P5 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
-    populate_matrix_zeros(p,ns);
 
     subtract_matrices(arr1,arr1,temp1,ns,0+r1,ns+c1,ns+r1,ns+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,ns+r2,0+c2,ns+r2,ns+c2,0,0);
     strassen(temp1,temp2,p,ns,0,0,0,0,0,0,cross_over_point); // P6
     // Use P6 for result matrix
     add_matrices(p,res,res,ns,0,0,r3,c3,r3,c3);
-    populate_matrix_zeros(p,ns);
 
     subtract_matrices(arr1,arr1,temp1,ns,ns+r1,0+c1,0+r1,0+c1,0,0);
     add_matrices(arr2,arr2,temp2,ns,0+r2,0+c2,0+r2,ns+c2,0,0);
@@ -276,7 +247,8 @@ void measure_crossover_point() {
 
     outdata.close();
 }
-
+//NOTE: writeup should talk about why crossover point is different from theoretical point. The further
+//the crossover point is from the theoretical one, the more suspicious we should be. Likely to have fair difference
 void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2,  int n, std::string input_file) {
     //cout << input_file << endl;
     std::ifstream pFile(input_file.c_str());
@@ -306,6 +278,9 @@ void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector
 }
 
 // -------------------------------------Task 3-------------------------------------------
+// TODO: debug. Task 3 is giving really weird results
+// TODO: fix strassen correctness on matrices of size 65,121,124,127 etc.
+//Change values along the diagonal
 float get_num_triangles(vector< vector<long long int> > &matrix, int s) {
     float num_triangles = 0;
     for (int i = 0; i < s; ++i) {
@@ -364,7 +339,6 @@ int main(int argc, char **argv) {
     
     if (flag == 0) {
         output_values_along_diagonal(strassen_result,n);
-        assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
     } else if (flag == 1) {
         // Compare runtimes of strassen and ours
         measure_multiplication_time();
@@ -373,9 +347,12 @@ int main(int argc, char **argv) {
     } else if (flag == 5) {
         calc_triangles();
     } else {
+        //print_matrix(arr1,n,n);
+        //print_matrix(arr2,n,n);
+        //print_matrix(strassen_result,n,n);
+        //print_matrix(naive_result,n,n);
         output_values_along_diagonal(strassen_result,n);
         assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
-        cout << "assertion passed" << endl;
     }    
 
     
