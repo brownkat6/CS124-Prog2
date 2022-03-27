@@ -25,8 +25,10 @@ void populate_matrix_values(vector< vector<long long int> > &arr, int r, int c) 
 
 void populate_matrix_values_p(vector< vector<long long int> > &arr, int s, float p) {
     for (int i = 0; i < s; ++i) {
-        for (int j = 0; j < s; ++j) {
-            arr[i][j] = (rand()%100 < p*100) ? 1 : 0;
+        for (int j = i+1; j < s; ++j) {
+            int v = (rand()%100 < p*100) ? 1 : 0;
+            arr[i][j] = v;
+            arr[j][i] = v;
         }
     }
 }
@@ -65,8 +67,9 @@ void naive_matrix_multiplication(vector< vector<long long int> > &arr1, vector< 
 void add_matrices(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int s, int r1, int c1, int r2, int c2, int r3, int c3) {
     int size1 = arr1.size();
     int size2 = arr2.size();
-    for(int i = 0; i < s; ++i) {
-        for(int j = 0; j < s; ++j) {
+    int sizeRes = res.size();
+    for(int i = 0; i < min(sizeRes-r3,s); ++i) {
+        for(int j = 0; j < min(sizeRes-c3,s); ++j) {
             res[i+r3][j+c3] = ((i+r1<size1 && j+c1<size1) ? arr1[i+r1][j+c1] : 0) + ((i+r2<size2 && j+c2<size2) ? arr2[i+r2][j+c2] : 0);
         }
     }
@@ -76,8 +79,9 @@ void subtract_matrices(vector< vector<long long int> > &arr1, vector< vector<lon
     // Add arr1 and arr2 and store result
     int size1 = arr1.size();
     int size2 = arr2.size();
-    for(int i = 0; i < s; ++i) {
-        for(int j = 0; j < s; ++j) {
+    int sizeRes = res.size();
+    for(int i = 0; i < min(sizeRes-r3,s); ++i) {
+        for(int j = 0; j < min(sizeRes-c3,s); ++j) {
             res[i+r3][j+c3] = ((i+r1<size1 && j+c1<size1) ? arr1[i+r1][j+c1] : 0) - ((i+r2<size2 && j+c2<size2) ? arr2[i+r2][j+c2] : 0);
         }
     }
@@ -243,7 +247,8 @@ void measure_crossover_point() {
 
     outdata.close();
 }
-
+//NOTE: writeup should talk about why crossover point is different from theoretical point. The further
+//the crossover point is from the theoretical one, the more suspicious we should be. Likely to have fair difference
 void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2,  int n, std::string input_file) {
     //cout << input_file << endl;
     std::ifstream pFile(input_file.c_str());
@@ -274,6 +279,8 @@ void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector
 
 // -------------------------------------Task 3-------------------------------------------
 // TODO: debug. Task 3 is giving really weird results
+// TODO: fix strassen correctness on matrices of size 65,121,124,127 etc.
+//Change values along the diagonal
 float get_num_triangles(vector< vector<long long int> > &matrix, int s) {
     float num_triangles = 0;
     for (int i = 0; i < s; ++i) {
@@ -340,10 +347,11 @@ int main(int argc, char **argv) {
     } else if (flag == 5) {
         calc_triangles();
     } else {
-        print_matrix(arr1,n,n);
-        print_matrix(arr2,n,n);
-        print_matrix(strassen_result,n,n);
-        print_matrix(naive_result,n,n);
+        //print_matrix(arr1,n,n);
+        //print_matrix(arr2,n,n);
+        //print_matrix(strassen_result,n,n);
+        //print_matrix(naive_result,n,n);
+        output_values_along_diagonal(strassen_result,n);
         assert(verify_strassen_equals_naive_multiplication(strassen_result,naive_result,n));
     }    
 

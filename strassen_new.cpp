@@ -8,26 +8,7 @@
 #include <chrono>
 using namespace std;
 
-// TODO: run ./strassen 4 3 input_file.txt
 // Command to Compile the c++ file: g++ -std=c++17 -O2 -Wall -Wextra strassen.cpp -o strassen -lm -lpthread ./strassen <args>
-//          Deprecated: c++ -std=gnu++2a -Wall -g -O3 strassen.cc -o strassen
-/**
-1) Analytically determine crossover point
-2) Generate matrices of a given size for testing matrix multiplication
-3) Implement naive matrix multiplication
-2) Implement Strassen's algorithm
-3) Benchmark multiplication time for different sizes of matrix for Strassen's vs naive implementation
-6) Implement Strassen's with cutoff to use naive multiplication below cutoff
-*/
-
-// TODO: calculate number of triangles in a matrix
-
-/**
- * Optimization roadmap
- * 1) Reduce the number of n/2 by n/2 allocations needed for the strassen() algorithm. Done.
- * 2) Avoid padding with extra zeros needlessly
- * 3) Modify wrapper code to take the input/output formats specified in the assignment. Done.
- */
 
 int cross_over_point = 128;
 
@@ -58,8 +39,10 @@ void populate_matrix_values(vector< vector<long long int> > &arr, int r, int c) 
 
 void populate_matrix_values_p(vector< vector<long long int> > &arr, int s, float p) {
     for (int i = 0; i < s; ++i) {
-        for (int j = 0; j < s; ++j) {
-            arr[i][j] = (rand()%100 < p*100) ? 1 : 0;
+        for (int j = i+1; j < s; ++j) {
+            int v = (rand()%100 < p*100) ? 1 : 0;
+            arr[i][j] = v;
+            arr[j][i] = v;
         }
     }
 }
@@ -73,11 +56,9 @@ void populate_matrix_zeros(vector< vector<long long int> > &arr, int s) {
 }
 
 void output_values_along_diagonal(vector< vector<long long int> > &matrix, int s) {
-    //cout << "-------Output Matrix Values Along Diagonal--------" << endl;
     for (int i = 0; i < s; ++i) {
         cout << matrix[i][i] << endl;
     }
-    //cout << "-------Finish Outputting Matrix Values Along Diagonal--------" << endl;
 }
 
 void print_matrix(vector< vector<long long int> > &matrix, int r, int c){
@@ -93,55 +74,28 @@ void print_matrix(vector< vector<long long int> > &matrix, int r, int c){
     }
 }
 
-/**
-
- */
-
 //---------------------------Strassens----------------------------------
 void naive_matrix_multiplication(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int n, int r1, int c1, int r2, int c2, int r3, int c3) {
     // Multiply arr1 and arr2 and store result
     // Note: We use i k j ordering to speedup multiplication
-
-    /**
-    for(int i = 0; i < n; ++i) 
-        for (int k = 0; k < n; ++k) 
-            for(int j = 0; j < n; ++j) 
-                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];
-                //res[i+r3][j+c3] += ((i+r1<size1 && k+c1<size1) ? arr1[i+r1][k+c1] : 0) * ((k+r2<size2 && j+c2<size2) ? arr2[k+r2][j+c2] : 0);
-            //*/
-    ///**
     int size1 = arr1.size();
     int size2 = arr2.size();
-    //cout << "multiply matrices of size " << size1 << " and " << size2 << endl;
     for(int i = 0; i < min(size1-r1,n); ++i) 
         for (int k = 0; k < min(size1-c1,min(size2-r2,n)); ++k) 
             for(int j = 0; j < min(size2-c2,n); ++j) 
-                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];//*/
-    //cout << "finish multiplication" << endl;
+                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];
 }
 
 void add_matrices(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int s, int r1, int c1, int r2, int c2, int r3, int c3) {
     // Add arr1 and arr2 and store result
-    /**
-    for(int i = 0; i < s; ++i)
-        for(int j = 0; j < s; ++j)
-            res[i+r3][j+c3] = arr1[i+r1][j+c1] + arr2[i+r2][j+c2];*/
-    ///**
-    
     int size1 = arr1.size();
     int size2 = arr2.size();
     int sizeRes = res.size();
-    //cout << "add matrices of size " << size1 << " and " << size2 << endl;
-    //cout << "r1 = " << r1 << ", c1 = " << c1 << ", r2 = " << r2 << ", c2 = " << c2 << ", r3 = " << r3 << ", c3 = " << c3 << endl;
-    //cout << res.size() << endl;
     for(int i = 0; i < min(sizeRes-r3,s); ++i) {
         for(int j = 0; j < min(sizeRes-c3,s); ++j) {
-            //res[i+r3][j+c3] = arr1[i+r1][j+c1] + arr2[i+r2][j+c2];
             res[i+r3][j+c3] = ((i+r1<size1 && j+c1<size1) ? arr1[i+r1][j+c1] : 0) + ((i+r2<size2 && j+c2<size2) ? arr2[i+r2][j+c2] : 0);
         }
     }
-    //cout << "finish addition" << endl;
-    //*/
 }
 
 void subtract_matrices(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int s, int r1, int c1, int r2, int c2, int r3, int c3) {
@@ -149,22 +103,11 @@ void subtract_matrices(vector< vector<long long int> > &arr1, vector< vector<lon
     int size1 = arr1.size();
     int size2 = arr2.size();
     int sizeRes = res.size();
-    //cout << "subtract matrices of size " << size1 << " and " << size2 << endl;
-    //cout << "r1 = " << r1 << ", c1 = " << c1 << ", r2 = " << r2 << ", c2 = " << c2 << endl;
-    
     for(int i = 0; i < min(sizeRes-r3,s); ++i) {
         for(int j = 0; j < min(sizeRes-c3,s); ++j) {
-    //for(int i = 0; i < s; ++i) {
-    //    for(int j = 0; j < s; ++j) {
-            //res[i+r3][j+c3] = arr1[i+r1][j+c1] - arr2[i+r2][j+c2];
             res[i+r3][j+c3] = ((i+r1<size1 && j+c1<size1) ? arr1[i+r1][j+c1] : 0) - ((i+r2<size2 && j+c2<size2) ? arr2[i+r2][j+c2] : 0);
         }
     }
-    //cout << "finish subtraction" << endl;
-    /**
-    for(int i = 0; i < s; ++i)
-        for(int j = 0; j < s; ++j)
-            res[i+r3][j+c3] = arr1[i+r1][j+c1] - arr2[i+r2][j+c2];*/
 }
 
 // r is the number of rows in arr1, l is the number of cols in arr1 and rows in arr2, c is the number of cols in arr2
@@ -233,76 +176,14 @@ void strassen(vector< vector<long long int> > &arr1, vector< vector<long long in
     strassen(temp1,temp2,p,ns,0,0,0,0,0,0,cross_over_point); // P7
     // Use P7 for result matrix
     add_matrices(p,res,res,ns,0,0,r3+ns,c3+ns,r3+ns,c3+ns);
-
-    /**
-    • AE +BG = P4 +P5 +P6 - P2
-    • AF +BH = P1 +P2
-    • CE +DG = P3 +P4
-    • CF +DH = P1 −P3 +P5 +P7
-    */
 }
 
 // Run strassen on input matrices of any size
 void runStrassen(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int n, int cross_over_point)
 {  
-// Check to see if these matrices have dimensions of a power of 2. If not,
-// the matrices must be resized and padded with zeroes to meet this criteria.
-/**
- * TODO: is there a way to handle indexing so that we only need to add 1 row/column of zeros for odd-numbered
- *      matrices for each call to strassen()?
- * To avoid padding by zeros, we could pass two indices tracking the last non-bogus row and the last non-bogus column
- * E.g. if we want to multiply two 17-17 matrices, then strassen() will split the problem into 4 16-16 matrices M1-M4,
- *      but call add, subtract, naive_matrix_multiplication functions with parameters
- *      add(M1, size=16, valid_row=16, valid_col=16)
- *      add(M2, 16, valid_row=16, valid_col=1)
- *      add(M3, 16, valid_row=1, valid_col=16)
- *      add(M4, 16, valid_row=1, valid_col=1)
- *      Then add, subtract, naive_matrix_multiplication() functions should just "generate" magic 
- *          0 values for the matrix values not within the valid_row, valid_col bounds
- *      This avoids allocating extra 0 values that we don't need --> speedup
- * 
- */
-// TODO: add function that pads an extra row/column to a matrix if the matrix has odd rows/columns
-
     int s = getNextPowerOf2(n);
-    
-    if (false) {
-    //if (s!=n) {
-        padMatrix(arr1,n,s); // Resize each matrix to the nearest power of 2
-        padMatrix(arr2,n,s);
-        padMatrix(res,n,s);
-    }
     strassen(arr1,arr2,res,s,0,0,0,0,0,0,cross_over_point);
     return;
-
-    /**
-    //vector< vector<long long int> > arr1Resized(s, vector<long long int> (s, 0));
-    //vector< vector<long long int> > arr2Resized(s, vector<long long int> (s, 0));
-    //vector< vector<long long int> > resResized(s, vector<long long int> (s, 0));
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            arr1Resized[i][j] = arr1[i][j];
-        }
-    }
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            arr2Resized[i][j] = arr2[i][j];
-        }
-    }
-    strassen(arr1Resized, arr2Resized, resResized, s,0,0,0,0,0,0);
-    // NOTE: is there a way to avoid copying data over to the original matrix?
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            res[i][j] = resResized[i][j];
-        }
-    }*/
 }
 
 // ---------------------------Extra Verification/Utility Code Below-------------------------------
@@ -425,8 +306,6 @@ void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector
 }
 
 // -------------------------------------Task 3-------------------------------------------
-//populate_matrix_values_p
-// TODO: debug
 float get_num_triangles(vector< vector<long long int> > &matrix, int s) {
     float num_triangles = 0;
     for (int i = 0; i < s; ++i) {
@@ -441,11 +320,10 @@ void calc_triangles() {
     float p_values[5] = {.01,.02,.03,.04,.05};
     float expected_triangles[5] = {178.4,1427.5,4817.7,11419.7,22304.1};
     vector< vector<long long int> > arr(n, vector<long long int> (n, 0));
-    vector< vector<long long int> > cubed(n, vector<long long int> (n, 0));
     for (int i = 0; i < 5; ++i) {
         float p = p_values[i];
         populate_matrix_values_p(arr,n,p);
-        //print_matrix(arr,5,5);
+        vector< vector<long long int> > cubed(n, vector<long long int> (n, 0));
         naive_matrix_multiplication(arr,arr,cubed,n,0,0,0,0,0,0);
         naive_matrix_multiplication(arr,cubed,cubed,n,0,0,0,0,0,0);
         print_matrix(cubed,5,5);
@@ -504,20 +382,3 @@ int main(int argc, char **argv) {
 
     
 }
-
-/**
-Input/Output Description
-Your code should take three arguments: a flag, a dimension, and an input file:
-$ ./strassen 0 dimension inputfile
-The flag 0 is meant to provide you some flexibility; you may use other values for your own testing,
-debugging, or extensions. The dimension, which we refer to henceforth as d, is the dimension of the matrix
-you are multiplying, so that 32 means you are multiplying two 32 by 32 matrices together. 
-The inputfile is
-an ASCII file with 2d2 integer numbers, one per line, representing two matrices A and B; you are to find
-the product AB = C. The first integer number is matrix entry a0,0, followed by a0,1, a0,2, . . . , a0,d−1; next
-comes a1,0, a1,1, and so on, for the first d2 numbers. The next d2 numbers are similar for matrix B.
-Your program should put on standard output (in C: printf, cout, System.out, etc.) a list of the values
-of the diagonal entries c0,0, n,1, . . . , cd−1,d−1, one per line, including a trailing newline. The output will
-be checked by a script – add no clutter. (You should not output the whole matrix, although of course all
-entries should be computed.)
- */
