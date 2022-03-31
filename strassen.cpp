@@ -10,20 +10,7 @@ using namespace std;
 
 // Command to Compile the c++ file: g++ -std=c++17 -O2 -Wall -Wextra strassen.cpp -o strassen -lm -lpthread ./strassen <args>
 
-int cross_over_point = 128;
-
-void padMatrix(vector< vector<long long int> > &mat, int size, int new_size) {
-    if (size % 2 == 1) {
-        for (int i = 0; i < size; ++i) {
-            vector<long long int> v_prime(new_size-size,0);
-            mat[i].reserve(mat[i].size() + distance(v_prime.begin(),v_prime.end()));
-            mat[i].insert(mat[i].end(),v_prime.begin(),v_prime.end());
-        }
-    }
-    for (int i = 0; i < new_size-size; ++i) {
-        mat.push_back(vector<long long int> (new_size,0));
-    }
-}
+int cross_over_point = 68;
 
 int getNextPowerOf2(int n) {
     return pow(2, int(ceil(log2(n))));
@@ -86,13 +73,13 @@ void naive_matrix_multiplication(vector< vector<long long int> > &arr1, vector< 
                 res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];
 }
 
-void naive_matrix_multiplication_no_padding(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int n, int r1, int c1, int r2, int c2, int r3, int c3) {
+void naive_matrix_multiplication_no_padding(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int n) {
     // Multiply arr1 and arr2 and store result
     // Note: We use i k j ordering to speedup multiplication
     for(int i = 0; i < n; ++i) 
         for (int k = 0; k < n; ++k) 
             for(int j = 0; j < n; ++j) 
-                res[i+r3][j+c3] += arr1[i+r1][k+c1] * arr2[k+r2][j+c2];
+                res[i][j] += arr1[i][k] * arr2[k][j];
 }
 
 void add_matrices(vector< vector<long long int> > &arr1, vector< vector<long long int> > &arr2, vector< vector<long long int> > &res, int s, int r1, int c1, int r2, int c2, int r3, int c3) {
@@ -320,7 +307,7 @@ void read_in_matrix_values(vector< vector<long long int> > &arr1, vector< vector
 float get_num_triangles(vector< vector<long long int> > &matrix, int s) {
     float num_triangles = 0;
     for (int i = 0; i < s; ++i) {
-        num_triangles += matrix[i][i];
+        num_triangles += static_cast< float >(matrix[i][i]);
     }
     
     return num_triangles/6;
@@ -332,15 +319,17 @@ void calc_triangles() {
     float expected_triangles[5] = {178.4,1427.5,4817.7,11419.7,22304.1};
     vector< vector<long long int> > arr(n, vector<long long int> (n, 0));
     for (int i = 0; i < 5; ++i) {
-        float p = p_values[i];
-        populate_matrix_values_p(arr,n,p);
-        vector< vector<long long int> > cubed(n, vector<long long int> (n, 0));
-        naive_matrix_multiplication(arr,arr,cubed,n,0,0,0,0,0,0);
-        naive_matrix_multiplication(arr,cubed,cubed,n,0,0,0,0,0,0);
-        print_matrix(cubed,5,5);
-        float expected_num_triangles = expected_triangles[i]; //(1024 choose 3) * p^3
-        float num_triangles = get_num_triangles(cubed,n);
-        cout << p << ": actual num triangles = " << num_triangles << ", expected num triangles = " << expected_num_triangles << endl;
+        for (int trial = 0; trial < 5; ++trial) {
+            float p = p_values[i];
+            populate_matrix_values_p(arr,n,p);
+            vector< vector<long long int> > squared(n, vector<long long int> (n, 0));
+            vector< vector<long long int> > cubed(n, vector<long long int> (n, 0));
+            runStrassen(arr,arr,squared,n,cross_over_point);
+            runStrassen(arr,squared,cubed,n,cross_over_point);
+            float expected_num_triangles = expected_triangles[i]; //(1024 choose 3) * p^3
+            float num_triangles = get_num_triangles(cubed,n);
+            cout << p << ": actual num triangles = " << num_triangles << ", expected num triangles = " << expected_num_triangles << endl;
+        }
     }
 }
 
@@ -368,12 +357,10 @@ int main(int argc, char **argv) {
         read_in_matrix_values(arr1,arr2,n,input_file);
     }
 
-    
-    
     // Run matrix multiplication 
     naive_matrix_multiplication(arr1,arr2,naive_result, n,0,0,0,0,0,0);
     runStrassen(arr1,arr2,strassen_result,n,cross_over_point);
-    naive_matrix_multiplication_no_padding(arr1,arr2,naive_result_no_pad,n,0,0,0,0,0,0);
+    naive_matrix_multiplication_no_padding(arr1,arr2,naive_result_no_pad,n);
     
     
     if (flag == 0) {
